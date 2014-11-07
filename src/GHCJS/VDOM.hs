@@ -24,6 +24,7 @@ module GHCJS.VDOM ( Properties, Children
                   , js_vnode          
                   , emptyDiv
                   , text
+                  , toProperties
                   ) where
 
 import Prelude hiding (div)
@@ -80,6 +81,10 @@ singlePropI k v = Properties [j| $r={}; $r[`k] = `v; |] -- can we do more effici
 
 singlePropS :: JSString -> JSString -> Properties
 singlePropS k v = Properties [j| $r={}; $r[`k] = `v; |]
+
+
+toProperties :: JSRef () -> Properties
+toProperties = Properties
 
 noChildren :: Children
 noChildren = Children [js'| [] |]
