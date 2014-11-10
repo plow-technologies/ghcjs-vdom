@@ -13,8 +13,8 @@
 
  -}
 
-module GHCJS.VDOM ( Properties, Children
-                  , VNode, Patch, DOMNode
+module GHCJS.VDOM ( Properties(..), Children(..)
+                  , VNode(..), Patch, DOMNode
                   , JSIdent
                   , diff, patch
                   , memo, memoKey
