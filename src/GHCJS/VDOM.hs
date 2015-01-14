@@ -25,6 +25,9 @@ module GHCJS.VDOM ( Properties(..), Children(..)
                   , emptyDiv
                   , text
                   , toProperties
+                  , createElement
+                  , click
+                  , dblclick
                   ) where
 
 import Prelude hiding (div)
@@ -91,7 +94,7 @@ noChildren = Children [js'| [] |]
 {-# INLINE noChildren #-}
 
 single :: VNode -> Children
-single (VNode x) = Children [js'| [`x]|]
+single (VNode x) = Children [js'| [`x] |]
 {-# INLINE single #-}
 
 class SomeChildren a where someChildren :: a -> Children
@@ -193,6 +196,10 @@ js_vnode :: JSString -> Properties -> Children -> VNode
 js_vnode tag (Properties props) (Children children) =
   VNode [jsu'| new h$vdom.VNode(`tag, `props, `children) |]
 
+
+createElement :: VNode -> IO DOMNode
+createElement (VNode y) = [jsu| h$vdom.createElement(`y) |]
+
 ---- these things should be in ghcjs-prim
 
 -- make a unique identifier
@@ -210,3 +217,9 @@ unsafeExport x =
 
 foreign import javascript unsafe "$r = $1;" js_unsafeExport :: Double -> JSRef a
 
+click = setEventHandler "click"
+dblclick = setEventHandler "dblclick"
+
+-- we will defenitly want a cleaner API For this stuff. but it' s a start.
+foreign import javascript unsafe "h$vdom.setEventHandler($3,$1,$2)"
+  setEventHandler :: JSString -> JSFun (IO a) -> Properties -> Properties

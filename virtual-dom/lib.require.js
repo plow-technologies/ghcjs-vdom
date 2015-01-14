@@ -11,7 +11,25 @@
 var isVirtualNode = require('vtree/is-vnode');
 var isThunk       = require('vtree/is-thunk');
 var isArray       = require('x-is-array');
-var VPatch        = require("vtree/vpatch")
+var VPatch        = require("vtree/vpatch");
+var Delegator     = require('dom-delegator');
+var EventHook     = require('./event-hook');
+
+
+
+
+// i've added this clause because this code for some reason also gets
+// interpreted at compile-time with node
+// in which navigator is non-existent, making Delegator() call crash.
+if (typeof navigator !== 'undefined') {
+   Delegator(); // this magically delegates events
+ }
+
+
+function setEventHandler (properties, eventName, eventHandler) {
+  properties[eventName] = EventHook(eventHandler);
+  return properties;
+}
 
 /** @constructor */
 function HSThunk(t, ids, key) {
@@ -109,15 +127,16 @@ function hasPatches(patch) {
     return false;
 }
 
-module.exports = { diff:          require('./diff')
-                 , HSThunk:       HSThunk
-                 , setThunkPatch: setThunkPatch
-                 , forceTree:     forceTree
-                 , forcePatch:    forcePatch
-                 , VNode:         require('vtree/vnode')
-                 , VText:         require('vtree/vtext')
-                 , patch:         require('vdom/patch')
-                 , createElement: require('vdom/create-element')
+module.exports = { diff:            require('./diff')
+                 , HSThunk:         HSThunk
+                 , setThunkPatch:   setThunkPatch
+                 , forceTree:       forceTree
+                 , forcePatch:      forcePatch
+                 , VNode:           require('vtree/vnode')
+                 , VText:           require('vtree/vtext')
+                 , patch:           require('vdom/patch')
+                 , createElement:   require('vdom/create-element')
+                 , setEventHandler: setEventHandler
                  };
 
 // the global variable we're using in the bindings
