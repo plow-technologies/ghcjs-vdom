@@ -28,6 +28,7 @@ module GHCJS.VDOM ( Properties(..), Children(..)
                   , createElement
                   , click
                   , dblclick
+                  , keypress
                   ) where
 
 import Prelude hiding (div)
@@ -35,12 +36,20 @@ import Prelude hiding (div)
 import GHCJS.Types
 import GHCJS.Foreign.QQ
 import GHCJS.Prim
+import GHCJS.Marshal
+import GHCJS.Foreign
 
 import GHCJS.VDOM.Internal
 import GHCJS.VDOM.QQ
 
+import Control.Applicative
 import Control.Exception
 import Control.Monad
+import Data.Maybe
+
+import Data.Traversable (sequenceA)
+
+import Data.Text (Text, unpack)
 
 import System.IO.Unsafe
 import Unsafe.Coerce
@@ -220,6 +229,43 @@ foreign import javascript unsafe "$r = $1;" js_unsafeExport :: Double -> JSRef a
 click = setEventHandler "click"
 dblclick = setEventHandler "dblclick"
 
+onEvent :: (FromJSRef a, PToJSRef a) => JSString -> (a -> IO b) -> Properties  -> IO Properties
+onEvent event f pl = do
+  cbfun <- mkCallback
+  return $ setEventHandler1 event cbfun pl
+  where cb ev = do
+          str <- (fmap jsEventValue) <$> fromJSRef ev
+          void . sequenceA $ f <$> str
+        mkCallback = syncCallback1 NeverRetain True cb 
+
+keypress :: (String -> IO b) -> Properties -> IO Properties
+keypress f = onEvent "keydown" (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
+
 -- we will defenitly want a cleaner API For this stuff. but it' s a start.
 foreign import javascript unsafe "h$vdom.setEventHandler($3,$1,$2)"
   setEventHandler :: JSString -> JSFun (IO a) -> Properties -> Properties
+
+foreign import javascript "h$vdom.setEventHandler($3,$1,$2)"
+  setEventHandler1 :: JSString -> (JSFun (JSRef a -> IO ())) -> Properties -> Properties
+
+
+data JSEvent a = JSEvent {
+  jsEventTimestamp :: Int
+, jsEventValue :: a
+} deriving (Show, Eq)
+
+instance Functor JSEvent where
+  fmap f (JSEvent n x) = JSEvent n $ f x
+
+newtype JSEventString = JSEventString { unJSEventString :: String } deriving (Eq, Show)
+
+
+instance (FromJSRef a, PToJSRef a) => FromJSRef (JSEvent a) where
+  fromJSRef ref = do
+    tmstp <- mFromJSRef =<< getPropMaybe ("timeStamp" :: String) ref
+    target <- getPropMaybe ("currentTarget" :: String) ref
+    val <- mFromJSRef =<< (\m -> return $ join m) =<< (sequenceA $ getPropMaybe ("value" :: String) <$> target)
+    [js_|console.log(`ref)|]
+    return $ JSEvent <$> tmstp <*> val
+    where mFromJSRef Nothing = return Nothing
+          mFromJSRef (Just a) = fromJSRef a  
