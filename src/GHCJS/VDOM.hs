@@ -33,6 +33,8 @@ module GHCJS.VDOM ( Properties(..), Children(..)
 
 import Prelude hiding (div)
 
+import Control.Concurrent
+
 import GHCJS.Types
 import GHCJS.Foreign.QQ
 import GHCJS.Prim
@@ -239,7 +241,8 @@ onEvent event f pl = do
         mkCallback = syncCallback1 NeverRetain True cb 
 
 keypress :: (String -> IO b) -> Properties -> IO Properties
-keypress f = onEvent "keydown" (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
+keypress f props = onEvent "keypress" func =<< onEvent "keyup" func props
+  where func = (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
 
 -- we will defenitly want a cleaner API For this stuff. but it' s a start.
 foreign import javascript unsafe "h$vdom.setEventHandler($3,$1,$2)"
@@ -265,7 +268,7 @@ instance (FromJSRef a, PToJSRef a) => FromJSRef (JSEvent a) where
     tmstp <- mFromJSRef =<< getPropMaybe ("timeStamp" :: String) ref
     target <- getPropMaybe ("currentTarget" :: String) ref
     val <- mFromJSRef =<< (\m -> return $ join m) =<< (sequenceA $ getPropMaybe ("value" :: String) <$> target)
-    [js_|console.log(`ref)|]
+    [js_|console.log("e" + `ref.currentEvent)|]
     return $ JSEvent <$> tmstp <*> val
     where mFromJSRef Nothing = return Nothing
           mFromJSRef (Just a) = fromJSRef a  
