@@ -29,6 +29,10 @@ module GHCJS.VDOM ( Properties(..), Children(..)
                   , click
                   , dblclick
                   , keypress
+                  , oninput
+                  , canvasLoad
+                  , addCustomEvent
+                  , removeEventHandler
                   ) where
 
 import Prelude hiding (div)
@@ -236,13 +240,29 @@ onEvent event f pl = do
   cbfun <- mkCallback
   return $ setEventHandler1 event cbfun pl
   where cb ev = do
-          str <- (fmap jsEventValue) <$> fromJSRef ev
+          str <- fromJSRef ev
           void . sequenceA $ f <$> str
         mkCallback = syncCallback1 NeverRetain True cb 
+
+canvasLoad :: (JSRef a -> IO ()) -> Properties -> IO Properties
+canvasLoad f props = onEvent "canvasLoad" f props
+
+
+oninput :: (String -> IO b) -> Properties -> IO Properties
+oninput f props = onEvent "oninput" func props
+  where func = (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
+
+
 
 keypress :: (String -> IO b) -> Properties -> IO Properties
 keypress f props = onEvent "keypress" func =<< onEvent "keyup" func props
   where func = (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
+
+addCustomEvent :: JSString -> IO ()
+addCustomEvent = js_addCustomEvent
+
+foreign import javascript safe "h$vdom.getDelegator().listenTo($1)"
+  js_addCustomEvent :: JSString -> IO ()
 
 -- we will defenitly want a cleaner API For this stuff. but it' s a start.
 foreign import javascript unsafe "h$vdom.setEventHandler($3,$1,$2)"
@@ -251,24 +271,5 @@ foreign import javascript unsafe "h$vdom.setEventHandler($3,$1,$2)"
 foreign import javascript "h$vdom.setEventHandler($3,$1,$2)"
   setEventHandler1 :: JSString -> (JSFun (JSRef a -> IO ())) -> Properties -> Properties
 
-
-data JSEvent a = JSEvent {
-  jsEventTimestamp :: Int
-, jsEventValue :: a
-} deriving (Show, Eq)
-
-instance Functor JSEvent where
-  fmap f (JSEvent n x) = JSEvent n $ f x
-
-newtype JSEventString = JSEventString { unJSEventString :: String } deriving (Eq, Show)
-
-
-instance (FromJSRef a, PToJSRef a) => FromJSRef (JSEvent a) where
-  fromJSRef ref = do
-    tmstp <- mFromJSRef =<< getPropMaybe ("timeStamp" :: String) ref
-    target <- getPropMaybe ("currentTarget" :: String) ref
-    val <- mFromJSRef =<< (\m -> return $ join m) =<< (sequenceA $ getPropMaybe ("value" :: String) <$> target)
-    [js_|console.log("e" + `ref.currentEvent)|]
-    return $ JSEvent <$> tmstp <*> val
-    where mFromJSRef Nothing = return Nothing
-          mFromJSRef (Just a) = fromJSRef a  
+foreign import javascript "h$vdom.removeEventHandler($2,$1)"
+  removeEventHandler :: JSString -> Properties -> Properties

@@ -45,6 +45,9 @@ function diffOrig(a, b) {
 // ...
 
 
+
+
+
 function diff(a, b, thunks) {
     var patch  = { a: a };
     thunks = thunks || [];
@@ -459,6 +462,8 @@ function setEventHandler (properties, eventName, eventHandler) {
   return properties;
 }
 
+function removeEventHandler (properties, eventName) { delete properties[eventName]}
+
 /** @constructor */
 function HSThunk(t, ids, key) {
     this.hst        = t;   // haskell thunk
@@ -565,6 +570,8 @@ module.exports = { diff:            require('./diff')
                  , patch:           require('vdom/patch')
                  , createElement:   require('vdom/create-element')
                  , setEventHandler: setEventHandler
+                 , removeEventHandler: setEventHandler
+                 , getDelegator:    Delegator
                  };
 
 // the global variable we're using in the bindings
@@ -842,7 +849,7 @@ var commonEvents = [
     "error","focus", "focusin", "focusout", "input", "keydown",
     "keypress", "keyup", "load", "mousedown", "mouseup",
     "resize", "scroll", "select", "submit", "touchcancel",
-    "touchend", "touchstart", "unload"
+    "touchend", "touchstart", "unload", "canvasLoad"
 ]
 
 /*  Delegator is a thin wrapper around a singleton `DOMDelegator`
