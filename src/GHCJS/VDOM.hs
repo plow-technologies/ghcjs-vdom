@@ -249,14 +249,16 @@ canvasLoad f props = onEvent "canvasLoad" f props
 
 
 oninput :: (String -> IO b) -> Properties -> IO Properties
-oninput f props = onEvent "oninput" func props
-  where func = (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
+oninput f props = onEvent "input" func props
+  where func jsEv = fJsRef =<< (GHCJS.Foreign.getProp ("value" :: String) =<< GHCJS.Foreign.getProp ("target" :: String) jsEv)
+        fJsRef = f . GHCJS.Foreign.fromJSString
 
 
 
 keypress :: (String -> IO b) -> Properties -> IO Properties
 keypress f props = onEvent "keypress" func =<< onEvent "keyup" func props
-  where func = (\jsstr -> f $ GHCJS.Foreign.fromJSString jsstr)
+  where func jsEv = fJsRef =<< (GHCJS.Foreign.getProp ("value" :: String) =<< GHCJS.Foreign.getProp ("target" :: String) jsEv)
+        fJsRef = f . GHCJS.Foreign.fromJSString
 
 addCustomEvent :: JSString -> IO ()
 addCustomEvent = js_addCustomEvent
