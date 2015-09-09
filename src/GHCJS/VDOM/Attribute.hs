@@ -37,5 +37,5 @@ mkAttrs' ''JSString [ ("class_", "className")
 
 mkAttrs ''Int [ "key", "width", "height" ]
 
-mkAttribute :: JSString -> JSRef () -> Attribute
+mkAttribute :: JSString -> JSRef -> Attribute
 mkAttribute = Attribute
